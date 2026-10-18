@@ -638,7 +638,6 @@ impl Client {
         interface.open_window(LoginWindow::new(
             crate::client_state().login_window(),
             crate::client_state().login_settings(),
-            crate::client_state().client_info(),
         ));
 
         Some(Self {
@@ -999,11 +998,8 @@ impl Client {
                         #[cfg(feature = "debug")]
                         self.interface.close_all_windows_except(DEBUG_WINDOWS);
 
-                        self.interface.open_window(LoginWindow::new(
-                            client_state().login_window(),
-                            client_state().login_settings(),
-                            client_state().client_info(),
-                        ));
+                        self.interface
+                            .open_window(LoginWindow::new(client_state().login_window(), client_state().login_settings()));
                     }
                 }
                 NetworkEvent::MapServerDisconnected { reason } => {

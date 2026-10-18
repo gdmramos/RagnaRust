@@ -7,7 +7,7 @@ use rust_state::{Path, PathExt, RustState, State};
 use crate::graphics::{Color, ShadowPadding};
 use crate::input::InputEvent;
 use crate::interface::windows::WindowClass;
-use crate::loaders::{ClientInfo, ClientInfoPathExt, OverflowBehavior, ServiceId};
+use crate::loaders::{OverflowBehavior, ServiceId};
 use crate::settings::{LoginSettings, LoginSettingsPathExt, ServiceSettingsPathExt};
 use crate::state::localization::LocalizationPathExt;
 use crate::state::theme::InterfaceThemeType;
@@ -28,27 +28,24 @@ impl LoginWindowState {
     }
 }
 
-pub struct LoginWindow<A, B, C> {
+pub struct LoginWindow<A, B> {
     window_state_path: A,
     service_settings_path: B,
-    client_info_path: C,
 }
 
-impl<A, B, C> LoginWindow<A, B, C> {
-    pub fn new(window_state_path: A, service_settings_path: B, client_info_path: C) -> Self {
+impl<A, B> LoginWindow<A, B> {
+    pub fn new(window_state_path: A, service_settings_path: B) -> Self {
         Self {
             window_state_path,
             service_settings_path,
-            client_info_path,
         }
     }
 }
 
-impl<A, B, C> CustomWindow<ClientState> for LoginWindow<A, B, C>
+impl<A, B> CustomWindow<ClientState> for LoginWindow<A, B>
 where
     A: Path<ClientState, LoginWindowState>,
     B: Path<ClientState, LoginSettings>,
-    C: Path<ClientState, ClientInfo>,
 {
     fn window_class() -> Option<WindowClass> {
         Some(WindowClass::Login)
@@ -115,15 +112,8 @@ where
             minimum_width: 450.0,
             maximum_width: 450.0,
             elements: (
-                text! { text: client_state().localization().select_service_text() },
-                drop_down! {
-                    options: self.client_info_path.services(),
-                    selected: self.window_state_path.selected_service(),
-                    click_handler: DefaultClickHandler::new(self.window_state_path.selected_service(), self.client_info_path.services()),
-                },
                 text! { text: client_state().localization().account_data_text() },
                 fragment! {
-                    // TODO: Theme this
                     gaps: 8.0,
                     children: (
                         text_box! {
@@ -133,20 +123,6 @@ where
                             focus_id: UsernameTextBox,
                             overflow_behavior: OverflowBehavior::Shrink,
                         },
-                        text_box! {
-                            ghost_text: client_state().localization().password_text(),
-                            state: password_path,
-                            input_handler: DefaultHandler::<_, _, MAXIMUM_PASSWORD_LENGTH>::new(password_path, password_action),
-                            focus_id: PasswordTextBox,
-                            hidable: true,
-                            overflow_behavior: OverflowBehavior::Shrink,
-                        },
-                    ),
-                },
-                fragment! {
-                    // TODO: Theme this
-                    gaps: 8.0,
-                    children: (
                         state_button! {
                             text: client_state().localization().remember_username_text(),
                             state: remember_username_path,
@@ -154,6 +130,14 @@ where
                             background_color: Color::TRANSPARENT,
                             hovered_background_color: Color::TRANSPARENT,
                             shadow_padding: ShadowPadding::default(),
+                        },
+                        text_box! {
+                            ghost_text: client_state().localization().password_text(),
+                            state: password_path,
+                            input_handler: DefaultHandler::<_, _, MAXIMUM_PASSWORD_LENGTH>::new(password_path, password_action),
+                            focus_id: PasswordTextBox,
+                            hidable: true,
+                            overflow_behavior: OverflowBehavior::Shrink,
                         },
                         state_button! {
                             text: client_state().localization().remember_password_text(),
@@ -170,6 +154,7 @@ where
                     disabled: disabled_selector,
                     disabled_tooltip: client_state().localization().log_in_button_tooltip(),
                     event: login_action,
+                    background_color: Color::rgb_u8(120, 20, 20)
                 },
             ),
         }
