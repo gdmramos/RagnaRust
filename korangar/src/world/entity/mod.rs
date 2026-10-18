@@ -366,7 +366,10 @@ fn get_entity_part_files(library: &Library, entity_type: EntityType, job_id: Job
         ],
         EntityType::Npc => vec![format!("npc\\{}", library.get::<JobIdentity>(job_id).to_string())],
         EntityType::Monster => vec![format!("몬스터\\{}", library.get::<JobIdentity>(job_id).to_string())],
-        EntityType::Warp | EntityType::Hidden => vec![format!("npc\\{}", library.get::<JobIdentity>(job_id).to_string())], // TODO: change
+        // Warps are not regular NPCs: the job identity ("WARPNPC") has no sprite in the data files, so we use the
+        // dedicated portal sprite instead.
+        EntityType::Warp => vec!["npc\\portal".to_owned()],
+        EntityType::Hidden => vec![format!("npc\\{}", library.get::<JobIdentity>(job_id).to_string())],
     }
 }
 
@@ -927,6 +930,11 @@ pub struct Player {
     pub luck_stat_points_cost: u8,
     pub attack_speed: u32,
     pub skill_points: u32,
+    pub money: u64,
+    pub base_experience: u64,
+    pub job_experience: u64,
+    pub next_base_experience: u64,
+    pub next_job_experience: u64,
 }
 
 impl Player {
@@ -942,6 +950,9 @@ impl Player {
         let base_level = character_information.base_level as usize;
         let job_level = character_information.job_level as usize;
         let stat_points = character_information.stat_points as u32;
+        let money = character_information.money.max(0) as u64;
+        let base_experience = character_information.experience.max(0) as u64;
+        let job_experience = character_information.job_experience.max(0) as u64;
 
         let entity_data = EntityData::from_character(account_id, character_information, WorldPosition::origin());
         let tile_position = TilePosition::new(0, 0);
@@ -981,6 +992,11 @@ impl Player {
             luck_stat_points_cost: 0,
             attack_speed: 0,
             skill_points: 0,
+            money,
+            base_experience,
+            job_experience,
+            next_base_experience: 0,
+            next_job_experience: 0,
         }
     }
 
@@ -1036,6 +1052,11 @@ impl Player {
             StatType::LuckStatPointCost(cost) => self.luck_stat_points_cost = cost,
             StatType::AttackSpeed(attack_speed) => self.attack_speed = attack_speed,
             StatType::SkillPoints(skill_points) => self.skill_points = skill_points,
+            StatType::Zeny(money) => self.money = money as u64,
+            StatType::BaseExperience(base_experience) => self.base_experience = base_experience,
+            StatType::JobExperience(job_experience) => self.job_experience = job_experience,
+            StatType::NextBaseExperience(next_base_experience) => self.next_base_experience = next_base_experience,
+            StatType::NextJobExperience(next_job_experience) => self.next_job_experience = next_job_experience,
             _ => {}
         }
     }
