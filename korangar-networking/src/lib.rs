@@ -960,4 +960,65 @@ mod packet_handlers {
             emotion: 3,
         }]));
     }
+
+    #[test]
+    fn re_skill_info_list_does_not_swallow_following_packets() {
+        let mut handler = NetworkingSystem::create_map_server_packet_handler(NoPacketCallback, SupportedPacketVersion::_20220406).unwrap();
+
+        // An "RE" era server sends `ZC_SKILLINFO_LIST` with header `0x0B32`
+        // directly before the initial status packet. Encountering an unknown
+        // packet used to make the client discard the rest of the buffer and
+        // with it the stat point costs.
+        let skill_info = ragnarok_packets::SkillInfoListRePacket {
+            skill_data: vec![0; 15],
+        };
+        let initial_stats = ragnarok_packets::InitialStatsPacket {
+            stat_points: 51,
+            strength: 1,
+            strength_stat_points_cost: 2,
+            agility: 1,
+            agility_stat_points_cost: 2,
+            vitatity: 1,
+            vitality_stat_points_cost: 2,
+            intelligence: 1,
+            intelligence_stat_points_cost: 2,
+            dexterity: 1,
+            dexterity_stat_points_cost: 2,
+            luck: 1,
+            luck_stat_points_cost: 2,
+            left_attack: 0,
+            rigth_attack: 0,
+            rigth_magic_attack: 0,
+            left_magic_attack: 0,
+            left_defense: 0,
+            rigth_defense: 0,
+            rigth_magic_defense: 0,
+            left_magic_defense: 0,
+            hit: 0,
+            flee: 0,
+            flee2: 0,
+            crit: 0,
+            attack_speed: 0,
+            bonus_attack_speed: 0,
+        };
+
+        let mut writer = ByteWriter::new();
+        skill_info.packet_to_bytes(&mut writer).unwrap();
+        initial_stats.packet_to_bytes(&mut writer).unwrap();
+        let mut reader = ByteReader::without_metadata(writer.as_slice());
+
+        let HandlerResult::Ok(events) = handler.process_one(&mut reader) else {
+            panic!("skill-info packet was not handled");
+        };
+        assert!(events.0.is_empty());
+
+        let HandlerResult::Ok(events) = handler.process_one(&mut reader) else {
+            panic!("initial-stats packet was not handled");
+        };
+
+        assert!(matches!(events.0.as_slice(), [NetworkEvent::InitialStats {
+            strength_stat_points_cost: 2,
+            ..
+        }]));
+    }
 }

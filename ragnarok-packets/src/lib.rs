@@ -1918,6 +1918,21 @@ pub struct UpdateSkillTreePacket {
     pub skill_information: Vec<SkillInformation>,
 }
 
+/// The `ZC_SKILLINFO_LIST` packet as sent by "RE" era clients. These clients use
+/// a different header (`0x0B32`) than the main clients this version targets
+/// (`0x010F`) and also a different, name-less skill layout. We only consume the
+/// packet to keep the packet stream in sync, otherwise an unknown packet makes
+/// the client drop the rest of the received buffer (like the follow-up
+/// [`InitialStatsPacket`]).
+#[derive(Debug, Clone, Packet, ServerPacket, MapServer)]
+#[cfg_attr(feature = "interface", derive(rust_state::RustState, korangar_interface::element::StateElement))]
+#[header(0x0B32)]
+#[variable_length]
+pub struct SkillInfoListRePacket {
+    #[length_remaining]
+    pub skill_data: Vec<u8>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, ByteConvertable)]
 #[cfg_attr(feature = "interface", derive(rust_state::RustState, korangar_interface::element::StateElement))]
 pub enum HotkeyType {

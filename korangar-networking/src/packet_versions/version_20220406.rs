@@ -13,6 +13,10 @@ use crate::{
     NoMetadata, ShopItem, UnifiedCharacterSelectionFailedReason, UnifiedLoginFailedReason,
 };
 
+/// The `SP_ZENY` value of the official `_sp` enum. It is also the id used by
+/// the [`StatType`] parser for [`StatType::Zeny`].
+const ZENY_SP_ID: u16 = 20;
+
 pub fn register_login_server_packets<Callback>(
     packet_handler: &mut PacketHandler<NetworkEventList, Callback>,
 ) -> Result<(), DuplicateHandlerError>
@@ -478,6 +482,7 @@ where
         let UpdateSkillTreePacket { skill_information } = packet;
         NetworkEvent::SkillTree { skill_information }
     })?;
+    packet_handler.register_noop::<SkillInfoListRePacket>()?;
     packet_handler.register(|packet: UpdateHotkeysPacket| NetworkEvent::SetHotkeyData {
         tab: packet.tab,
         hotkeys: packet
@@ -860,7 +865,16 @@ where
         NetworkEvent::OpenShop { items }
     })?;
     packet_handler.register(|packet: BuyShopItemsResultPacket| NetworkEvent::BuyingCompleted { result: packet.result })?;
-    packet_handler.register_noop::<ParameterChangePacket>()?;
+    // rAthena sends the player's zeny through the "long" parameter change
+    // packet. The `variable_id` matches the official `SP_*` enum, where
+    // `SP_ZENY` is 20 (the same id the `StatType` parser uses). All other
+    // values are either handled by the dedicated stat packets or irrelevant.
+    packet_handler.register(|packet: ParameterChangePacket| match packet.variable_id {
+        ZENY_SP_ID => Some(NetworkEvent::UpdateStat {
+            stat_type: StatType::Zeny(packet.value),
+        }),
+        _ => None,
+    })?;
     packet_handler.register(|packet: SellListPacket| NetworkEvent::SellItemList { items: packet.items })?;
     packet_handler.register(|packet: SellItemsResultPacket| NetworkEvent::SellingCompleted { result: packet.result })?;
     packet_handler.register_noop::<RequestStatUpResponsePacket>()?;
